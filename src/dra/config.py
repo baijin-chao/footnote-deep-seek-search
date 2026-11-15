@@ -36,7 +36,7 @@ def _pick(env: dict[str, str], key: str, default, cast=str):
 class Settings:
     # 运行
     run_mode: str = "live"
-    # LLM
+    # 大模型
     llm_base_url: str = "https://api.deepseek.com"
     llm_model: str = "deepseek-flash"
     llm_model_strong: str = "deepseek-v4-pro"
@@ -71,7 +71,7 @@ class Settings:
     db_path: Path = field(default_factory=lambda: REPO_ROOT / ".work" / "dra.db")
     trace_dir: Path = field(default_factory=lambda: REPO_ROOT / ".work" / "traces")
     fixtures_dir: Path = field(default_factory=lambda: REPO_ROOT / "fixtures")
-    # web
+    # 网页服务
     app_host: str = "127.0.0.1"
     app_port: int = 8710
     log_level: str = "INFO"

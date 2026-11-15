@@ -65,10 +65,36 @@ src/dra/
 - Python 3.12，全部文件 `from __future__ import annotations`
 - 公开函数写类型标注；内部小函数可省
 - 数据用 `@dataclass`，跨模块契约用 `pydantic.BaseModel`（只用于 LLM 结构化输出）
-- 标识符英文，注释与文档中文
 - 模块头写一句 docstring 说明"这个文件负责什么、不负责什么"
 
-### 3.2 禁止事项
+### 3.2 语言约定（强制）
+
+| 部分 | 语言 | 说明 |
+|---|---|---|
+| 标识符（变量/函数/类/常量/文件名） | **英文** | `def verify_citations(...)`、`class SearchChain` |
+| **注释（行内、块、docstring）** | **中文** | 无例外，见下方自查命令 |
+| 用户可见文案（CLI 输出、报告、错误信息） | **中文** | 报告本身也是中文，术语可保留英文原词 |
+| 提交信息 | **英文** | 见 §8.1 |
+| 日志字段 / 事件名 / 配置键 | **英文** | `emit("search_done", results=8)` |
+
+**所有注释一律用中文**，包括：模块 docstring、类/函数 docstring、行内 `#` 注释、分节注释。
+
+允许的例外只有三类：
+
+1. shebang（`#!/usr/bin/env python`）与编码声明
+2. 被注释掉的 SQL / 正则 / URL 等字面量
+3. `# type: ignore` 这类工具指令
+
+自查命令（提交前跑一次，应无输出）：
+
+```powershell
+Get-ChildItem src,scripts -Recurse -Filter *.py |
+  Select-String -Pattern '^\s*#\s*[A-Za-z]'
+```
+
+发现英文注释就改中文，而不是加进例外。
+
+### 3.3 禁止事项
 
 | 禁止 | 原因 |
 |---|---|
@@ -78,7 +104,7 @@ src/dra/
 | 裸 `except:` | 至少 `except Exception as exc` 并记录 |
 | 把密钥写进代码或默认值 | 只从 `Settings` 取，来自 `.env` |
 
-### 3.3 错误处理
+### 3.4 错误处理
 
 - provider 层：捕获网络/解析异常，**转成带语义的异常**（`LLMError` / `SearchError`）
 - 编排层：区分三类
@@ -87,7 +113,7 @@ src/dra/
   - 不可继续（规划失败）→ 进 `FAILED`，保留已有产物
 - 任何重试都要有上限和退避，禁止无限重试
 
-### 3.4 时间与金额
+### 3.5 时间与金额
 
 - 时间统一 `util.now_iso()`（带时区）
 - 金额一律用 `Settings.cost_cny()` 计算，不在业务代码里写单价

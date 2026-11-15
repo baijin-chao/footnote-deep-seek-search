@@ -6,6 +6,7 @@
 
 - 状态机（`src/dra/agent/machine.py`）是唯一写入者，角色模块只做纯计算
 - 所有外部 I/O 只允许出现在 `src/dra/providers/`，且必须包在 `tracer.span` 里
+- **注释与 docstring 一律中文**，标识符与提交信息用英文
 - 测试必须离线，提交前跑 `scripts\test.cmd`
 - 绝不提交 `.env` / `vendor/` / `.work/` / `.tools/`
 - 改动前先读 `docs/00-pre-dev-spec.md`，确认属于哪个迭代版本
