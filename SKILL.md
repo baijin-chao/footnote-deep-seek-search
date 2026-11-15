@@ -74,7 +74,7 @@ src/dra/
 | 标识符（变量/函数/类/常量/文件名） | **英文** | `def verify_citations(...)`、`class SearchChain` |
 | **注释（行内、块、docstring）** | **中文** | 无例外，见下方自查命令 |
 | 用户可见文案（CLI 输出、报告、错误信息） | **中文** | 报告本身也是中文，术语可保留英文原词 |
-| 提交信息 | **英文** | 见 §8.1 |
+| 提交信息 | **类型英文 + 描述中文** | `feat: 引用回填校验`，见 §8.1 |
 | 日志字段 / 事件名 / 配置键 | **英文** | `emit("search_done", results=8)` |
 
 **所有注释一律用中文**，包括：模块 docstring、类/函数 docstring、行内 `#` 注释、分节注释。
@@ -221,17 +221,24 @@ scripts\test.cmd
 
 ### 8.1 提交信息
 
-Conventional Commits，英文，一行标题 + 空行 + 要点：
+Conventional Commits 格式，但**描述用中文**：类型前缀保留英文（便于工具解析与筛选），冒号后的摘要与正文用中文。
 
 ```
-feat: verify citations against source text (V1)
+feat: 引用校验：把每个 [En] 回填到原文比对
 
-- verify.py: sentence split, bigram overlap, three tiers
-- reference list generated from used markers
-- 12 offline tests
+- verify.py：切句、中文 bigram 分词、三级判定
+- 参考来源改为按实际引用生成
+- 新增 12 个离线测试
 ```
 
-类型：`feat` / `fix` / `refactor` / `docs` / `test` / `chore`
+规则：
+
+- 标题一行，不超过 50 字，不加句号
+- 空一行再写正文要点，每条以 `-` 开头
+- 正文说清"改了什么、为什么"，不写"优化了代码"这种空话
+- 类型前缀：`feat` / `fix` / `refactor` / `docs` / `test` / `chore`
+
+**历史说明**：仓库前 5 个提交是英文的，属于规则建立前的产物，不重写历史（重写需要 force push，会破坏引用）。从本规则生效之日起，新提交一律用中文描述。
 
 ### 8.2 绝对不能提交
 
