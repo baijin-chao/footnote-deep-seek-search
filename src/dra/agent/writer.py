@@ -8,6 +8,15 @@ from typing import Any
 from ..providers.llm import LLMClient
 from ..trace import Tracer
 from ..util import truncate
+from ..verify import (
+    DEFAULT_STRONG,
+    DEFAULT_WEAK,
+    VerifyReport,
+    render_references,
+    render_verification_block,
+    strip_reference_section,
+    verify_citations,
+)
 
 SYSTEM = """你是资深研究员，负责基于给定证据撰写中文研究报告。
 
@@ -38,11 +47,14 @@ def write_report(
     tracer: Tracer,
     *,
     note: str = "",
-) -> tuple[str, list[dict[str, Any]]]:
+    strong: float = DEFAULT_STRONG,
+    weak: float = DEFAULT_WEAK,
+) -> tuple[str, list[dict[str, Any]], VerifyReport]:
     evidence_block = build_evidence_block(rows)
     user = f"研究问题：{question}\n\n可用证据：\n{evidence_block}\n"
     if note:
         user += f"\n补充说明：{note}\n"
+    user += "\n注意：只写正文，不要输出「参考来源」章节，引用列表由程序生成。"
 
     with tracer.span("write", kind="step", evidence_count=len(rows)) as span:
         result = llm.complete(
@@ -50,10 +62,26 @@ def write_report(
             span_name="write_llm",
             max_tokens=3000,
         )
-        markdown = result.text.strip()
-        citations = extract_citations(markdown, rows)
-        span.set(chars=len(markdown), citation_count=len(citations))
-        return markdown, citations
+        body = strip_reference_section(result.text)
+        citations = extract_citations(body, rows)
+        used = {int(c["marker"][1:]) for c in citations}
+        verification = verify_citations(body, rows, strong=strong, weak=weak)
+
+        markdown = "\n\n".join(
+            [
+                body,
+                render_references(rows, used),
+                render_verification_block(verification, strong=strong, weak=weak),
+            ]
+        )
+        span.set(
+            chars=len(markdown),
+            citation_count=len(citations),
+            verify_pass_rate=verification.pass_rate,
+            verify_grounded_rate=verification.grounded_rate,
+            verify_total=verification.total,
+        )
+        return markdown, citations, verification
 
 
 def extract_citations(markdown: str, rows: list[Any]) -> list[dict[str, Any]]:

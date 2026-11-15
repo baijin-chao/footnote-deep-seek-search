@@ -51,6 +51,7 @@ class ResearchAgent:
         stop_reason: str | None = None
         report_md = ""
         citations: list[dict[str, Any]] = []
+        verification = None
         error: str | None = None
 
         try:
@@ -103,7 +104,18 @@ class ResearchAgent:
                 elif state == "WRITE":
                     rows = self.store.list_evidence(run_id)
                     note = f"注意：检索在「{stop_reason}」处提前结束，未覆盖全部子问题。" if stop_reason else ""
-                    report_md, citations = write_report(question, rows, llm, tracer, note=note)
+                    report_md, citations, verification = write_report(
+                        question,
+                        rows,
+                        llm,
+                        tracer,
+                        note=note,
+                        strong=self.s.verify_strong,
+                        weak=self.s.verify_weak,
+                    )
+                    for claim in verification.claims:
+                        self.store.add_claim(run_id, claim.sentence, claim.markers, claim.status)
+                    self._emit("verify", **verification.as_dict())
                     self.store.save_report(run_id, report_md, citations, now_iso())
                     stats.steps += 1
                     state = "DONE"
@@ -144,6 +156,7 @@ class ResearchAgent:
             },
             "stop_reason": stop_reason,
             "error": error,
+            "verification": verification.as_dict() if verification else None,
             "trace": str(tracer.path),
         }
         self._emit("done", **result)

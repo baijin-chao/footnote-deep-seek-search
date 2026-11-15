@@ -45,6 +45,12 @@ def make_printer(quiet: bool):
             print(f"     ! 子问题失败: {data['error'][:120]}")
         elif event == "reflect":
             print(f"   证据 {data['evidence_count']} 条" + (f"，提前结束：{data['stop_reason']}" if data.get("stop_reason") else ""))
+        elif event == "verify":
+            print(
+                f"   引用校验 强支撑 {data['supported']}/{data['total']}，"
+                f"弱支撑 {data['weak']}，未证实 {data['unverified']}"
+                + (f"，缺编号 {data['missing']}" if data.get("missing") else "")
+            )
         elif event == "error":
             print(f"❌ {data['message']}")
 
@@ -77,6 +83,13 @@ def main(argv: list[str] | None = None) -> int:
     print("\n" + "═" * 60)
     print(f"状态: {result['status']}   证据: {stats['evidence']} 条   步数: {stats['steps']}")
     print(f"token: {stats['tokens_in']} in / {stats['tokens_out']} out   成本: ¥{stats['cost_cny']}   耗时: {stats['elapsed_s']}s")
+    verify = result.get("verification")
+    if verify:
+        print(
+            f"引用校验: 强支撑 {verify['supported']}/{verify['total']}"
+            f"  弱支撑 {verify['weak']}  未证实 {verify['unverified']}"
+            f"  落地率 {verify['grounded_rate']:.0%}"
+        )
     if result.get("stop_reason"):
         print(f"提前结束: {result['stop_reason']}")
     if result.get("error"):

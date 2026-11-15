@@ -11,6 +11,7 @@
 # ---- 依赖与缓存 ----
 vendor/
 .tools/
+pytest-cache-files-*/
 __pycache__/
 *.pyc
 .pytest_cache/

@@ -159,6 +159,18 @@ class Store:
         rows = self.conn.execute("SELECT content_hash FROM evidence WHERE run_id=?", (run_id,))
         return {r["content_hash"] for r in rows}
 
+    # ---------- claim ----------
+    def add_claim(self, run_id: str, text: str, evidence_ids: list[int], support: str) -> int:
+        cur = self.conn.execute(
+            "INSERT INTO claim (run_id, text, evidence_ids_json, support) VALUES (?,?,?,?)",
+            (run_id, text, json.dumps(evidence_ids), support),
+        )
+        self.conn.commit()
+        return int(cur.lastrowid)
+
+    def list_claims(self, run_id: str) -> list[sqlite3.Row]:
+        return list(self.conn.execute("SELECT * FROM claim WHERE run_id=? ORDER BY id", (run_id,)))
+
     # ---------- report ----------
     def save_report(self, run_id: str, markdown: str, citations: list[dict], created_at: str) -> None:
         self.conn.execute(

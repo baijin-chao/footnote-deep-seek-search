@@ -65,6 +65,8 @@ class Settings:
     budget_max_cny: float = 0.6
     budget_max_seconds: float = 120.0
     reflect_max_rounds: int = 2
+    verify_strong: float = 0.5
+    verify_weak: float = 0.3
     # 存储
     db_path: Path = field(default_factory=lambda: REPO_ROOT / ".work" / "dra.db")
     trace_dir: Path = field(default_factory=lambda: REPO_ROOT / ".work" / "traces")
@@ -103,6 +105,8 @@ class Settings:
             budget_max_cny=_pick(env, "BUDGET_MAX_CNY", cls.budget_max_cny, float),
             budget_max_seconds=_pick(env, "BUDGET_MAX_SECONDS", cls.budget_max_seconds, float),
             reflect_max_rounds=_pick(env, "REFLECT_MAX_ROUNDS", cls.reflect_max_rounds, int),
+            verify_strong=_pick(env, "VERIFY_STRONG", cls.verify_strong, float),
+            verify_weak=_pick(env, "VERIFY_WEAK", cls.verify_weak, float),
             db_path=REPO_ROOT / _pick(env, "DB_PATH", ".work/dra.db"),
             trace_dir=REPO_ROOT / _pick(env, "TRACE_DIR", ".work/traces"),
             fixtures_dir=REPO_ROOT / _pick(env, "FIXTURES_DIR", "fixtures"),
