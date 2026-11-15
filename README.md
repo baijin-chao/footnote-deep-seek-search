@@ -8,8 +8,10 @@
 
 | 文档 | 内容 |
 |---|---|
+| [SKILL.md](SKILL.md) | **开发规范**：不变量、分层、代码/测试/提交规则、环境手册 |
 | [使用指南](docs/03-usage-guide.md) | 安装、命令、产物、排错、提问技巧 |
 | [迭代路线](docs/01-roadmap.md) | V0–V5 每次迭代的目标与指标 |
+| [引用校验](docs/05-citation-verification.md) | 方法、阈值、实测结果与已知局限 |
 | [未来展望](docs/04-outlook.md) | 浏览器界面设计、中期方向、长期加分项 |
 | [开发前置说明](docs/00-pre-dev-spec.md) | 技术选型、架构、数据模型、评测方案 |
 | [示例报告](docs/example-report-v0.md) | V0 真实产出 |
