@@ -9,6 +9,7 @@ from __future__ import annotations
 import time
 from typing import Any, Callable
 
+from ..cache import SearchCache
 from ..config import Settings
 from ..models import Stats
 from ..providers.fetch import Fetcher
@@ -39,7 +40,8 @@ class ResearchAgent:
         stats = Stats()
         tracer = Tracer(run_id, self.s.trace_dir, self.store)
         llm = LLMClient(self.s, tracer, on_usage=lambda tin, tout, cost: stats.add_llm(tin, tout, cost))
-        search: SearchChain = build_search(self.s)
+        cache = SearchCache(self.s.db_path, self.s.search_cache_ttl_days) if self.s.search_cache else None
+        search: SearchChain = build_search(self.s, cache=cache)
         fetcher = Fetcher(self.s)
         reader = Reader(self.s, fetcher)
         t0 = time.perf_counter()
@@ -157,6 +159,7 @@ class ResearchAgent:
             "stop_reason": stop_reason,
             "error": error,
             "verification": verification.as_dict() if verification else None,
+            "cache": cache.stats() if cache else None,
             "trace": str(tracer.path),
         }
         self._emit("done", **result)
@@ -165,6 +168,8 @@ class ResearchAgent:
             search.close()
             fetcher.close()
             llm.close()
+            if cache:
+                cache.close()
         except Exception:
             pass
         return result

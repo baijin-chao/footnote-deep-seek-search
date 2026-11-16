@@ -121,8 +121,9 @@ class LLMClient:
         model: str | None = None,
         span_name: str = "llm_json",
         repair_attempts: int = 1,
+        temperature: float | None = None,
     ) -> tuple[T, LLMResult]:
-        result = self.complete(messages, model=model, json_mode=True, span_name=span_name)
+        result = self.complete(messages, model=model, json_mode=True, span_name=span_name, temperature=temperature)
         parsed, err = _parse_model(result.text, schema)
         if parsed is not None:
             return parsed, result
@@ -135,7 +136,9 @@ class LLMClient:
                     "content": f"上面的输出不符合 JSON 要求（{err}）。请只输出合法 JSON，不要解释、不要代码块。",
                 },
             ]
-            result = self.complete(repair, model=model, json_mode=True, span_name=f"{span_name}_repair")
+            result = self.complete(
+                repair, model=model, json_mode=True, span_name=f"{span_name}_repair", temperature=temperature
+            )
             parsed, err = _parse_model(result.text, schema)
             if parsed is not None:
                 return parsed, result

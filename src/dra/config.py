@@ -32,6 +32,10 @@ def _pick(env: dict[str, str], key: str, default, cast=str):
         return default
 
 
+def _to_bool(raw) -> bool:
+    return str(raw).strip().lower() not in ("0", "false", "no", "off", "")
+
+
 @dataclass(frozen=True)
 class Settings:
     # 运行
@@ -56,6 +60,9 @@ class Settings:
     bocha_api_key: str = ""
     search_max_results: int = 8
     search_timeout: float = 20.0
+    # 搜索缓存：按 (provider, query) 缓存结果，重跑时省额度
+    search_cache: bool = True
+    search_cache_ttl_days: float = 7.0
     # 抓取
     fetch_timeout: float = 20.0
     fetch_max_bytes: int = 3_000_000
@@ -98,6 +105,8 @@ class Settings:
             bocha_api_key=_pick(env, "BOCHA_API_KEY", ""),
             search_max_results=_pick(env, "SEARCH_MAX_RESULTS", cls.search_max_results, int),
             search_timeout=_pick(env, "SEARCH_TIMEOUT", cls.search_timeout, float),
+            search_cache=_pick(env, "SEARCH_CACHE", cls.search_cache, _to_bool),
+            search_cache_ttl_days=_pick(env, "SEARCH_CACHE_TTL_DAYS", cls.search_cache_ttl_days, float),
             fetch_timeout=_pick(env, "FETCH_TIMEOUT", cls.fetch_timeout, float),
             fetch_max_bytes=_pick(env, "FETCH_MAX_BYTES", cls.fetch_max_bytes, int),
             budget_max_steps=_pick(env, "BUDGET_MAX_STEPS", cls.budget_max_steps, int),

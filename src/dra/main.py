@@ -20,6 +20,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--max-steps", type=int, default=0, help="覆盖预算：最大步数")
     p.add_argument("--max-cny", type=float, default=0.0, help="覆盖预算：最大成本（元）")
     p.add_argument("--quiet", action="store_true", help="只输出最终报告")
+    p.add_argument("--no-cache", action="store_true", help="禁用搜索缓存（时效题评测用）")
     return p
 
 
@@ -67,6 +68,8 @@ def main(argv: list[str] | None = None) -> int:
         settings = _replace(settings, budget_max_steps=args.max_steps)
     if args.max_cny:
         settings = _replace(settings, budget_max_cny=args.max_cny)
+    if args.no_cache:
+        settings = _replace(settings, search_cache=False)
     mode = args.mode or settings.run_mode
 
     question = " ".join(args.question).strip()
@@ -89,6 +92,12 @@ def main(argv: list[str] | None = None) -> int:
             f"引用校验: 强支撑 {verify['supported']}/{verify['total']}"
             f"  弱支撑 {verify['weak']}  未证实 {verify['unverified']}"
             f"  落地率 {verify['grounded_rate']:.0%}"
+        )
+    cache = result.get("cache")
+    if cache:
+        fuzzy = f"（其中近似 {cache['fuzzy_hits']}）" if cache.get("fuzzy_hits") else ""
+        print(
+            f"搜索缓存: 命中 {cache['hits']}{fuzzy}  未命中 {cache['misses']}  命中率 {cache['hit_rate']:.0%}"
         )
     if result.get("stop_reason"):
         print(f"提前结束: {result['stop_reason']}")

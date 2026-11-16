@@ -24,10 +24,12 @@ class Plan(BaseModel):
 
 def make_plan(question: str, llm: LLMClient, tracer: Tracer, max_items: int = 6) -> list[str]:
     with tracer.span("plan", kind="step", question=question) as span:
+        # temperature=0：让同一问题的拆解尽量稳定，否则搜索缓存几乎无法命中
         plan, _ = llm.complete_json(
             [{"role": "system", "content": SYSTEM}, {"role": "user", "content": question}],
             Plan,
             span_name="plan_llm",
+            temperature=0.0,
         )
         cleaned: list[str] = []
         seen: set[str] = set()

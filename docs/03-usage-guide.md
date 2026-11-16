@@ -47,6 +47,7 @@ notepad .work\reports\<run_id>.md
 | `scripts\run.cmd "问题" --max-steps 6` | 限制最大步数（默认 25） |
 | `scripts\run.cmd "问题" --max-cny 0.05` | 限制单次成本上限 |
 | `scripts\run.cmd "问题" --out D:\a.md` | 指定报告输出路径 |
+| `scripts\run.cmd "问题" --no-cache` | 禁用搜索缓存（时效题评测用） |
 | `scripts\run.cmd --help` | 查看全部参数 |
 | `scripts\check.cmd` | 校验 `.env` 与 API 连通性 |
 | `scripts\setup.ps1` | 重装依赖到 `vendor/`（需管理员） |
@@ -110,6 +111,8 @@ $py = "C:\Users\baijin-chao\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\p
 | `REFLECT_MAX_ROUNDS` | 2 | 反思补检索轮数（V3 生效） |
 | `VERIFY_STRONG` | 0.5 | 引用判定为「强支撑」的词面覆盖率阈值 |
 | `VERIFY_WEAK` | 0.3 | 判定为「弱支撑」的阈值，低于此为「未证实」 |
+| `SEARCH_CACHE` | 1 | 是否启用搜索缓存（1 开 / 0 关） |
+| `SEARCH_CACHE_TTL_DAYS` | 7 | 缓存有效期，过期后重新搜索 |
 
 ### 换模型
 

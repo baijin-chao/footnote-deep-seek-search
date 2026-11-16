@@ -105,10 +105,14 @@ class BochaSearch:
 
 
 class SearchChain:
-    """按顺序尝试多个 provider，任一成功即返回。"""
+    """按顺序尝试多个 provider，任一成功即返回。
 
-    def __init__(self, providers: list) -> None:
+    传入 cache 时优先读缓存：命中则不发起任何网络请求，这对评测反复跑同一批题很关键。
+    """
+
+    def __init__(self, providers: list, cache=None) -> None:
         self.providers = providers
+        self.cache = cache
 
     @property
     def name(self) -> str:
@@ -124,11 +128,19 @@ class SearchChain:
     def search(self, query: str, tracer: Tracer) -> list[SearchResult]:
         errors: list[str] = []
         for provider in self.providers:
+            cached = self.cache.get(provider.name, query) if self.cache else None
+            if cached is not None:
+                with tracer.span("search", kind="tool", provider=provider.name, query=query, cached=True) as span:
+                    span.set(results=len(cached))
+                return [SearchResult(**item) for item in cached]
+
             try:
-                with tracer.span("search", kind="tool", provider=provider.name, query=query) as span:
+                with tracer.span("search", kind="tool", provider=provider.name, query=query, cached=False) as span:
                     results = provider.search(query)
                     span.set(results=len(results))
                 if results:
+                    if self.cache:
+                        self.cache.put(provider.name, query, [r.__dict__ for r in results])
                     return results
                 errors.append(f"{provider.name}: 0 条结果")
             except Exception as exc:  # 降级到下一个 provider
@@ -136,7 +148,7 @@ class SearchChain:
         raise SearchError("；".join(errors) or "无可用搜索源")
 
 
-def build_search(settings: Settings) -> SearchChain:
+def build_search(settings: Settings, cache=None) -> SearchChain:
     if settings.search_provider == "bocha":
         primary = BochaSearch(settings)
         secondary = TavilySearch(settings) if settings.search_api_key else None
@@ -144,4 +156,4 @@ def build_search(settings: Settings) -> SearchChain:
         primary = TavilySearch(settings)
         secondary = BochaSearch(settings) if settings.bocha_api_key else None
     providers = [p for p in (primary, secondary) if p is not None]
-    return SearchChain(providers)
+    return SearchChain(providers, cache=cache)
