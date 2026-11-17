@@ -64,11 +64,23 @@ class JudgeResult:
     factual_errors: list[str] = field(default_factory=list)
     details: list[dict[str, Any]] = field(default_factory=list)
     error: str = ""
+    judged_items: int = 0
+    """judge 实际返回了几条判定。
+
+    小于 total_items 说明 judge 漏判了要点（实测出现过），此时覆盖率会被低估，
+    评测报告应提示人工复核。
+    """
+
+    @property
+    def incomplete(self) -> bool:
+        return self.judged_items < self.total_items
 
     def as_dict(self) -> dict[str, Any]:
         return {
             "covered_items": self.covered_items,
             "total_items": self.total_items,
+            "judged_items": self.judged_items,
+            "incomplete": self.incomplete,
             "refused": self.refused,
             "factual_errors": self.factual_errors,
             "details": self.details,
@@ -109,4 +121,5 @@ def judge_report(question: Question, report: str, llm: LLMClient) -> JudgeResult
         refused=bool(output.refused),
         factual_errors=list(output.factual_errors),
         details=[item.model_dump() for item in output.covered],
+        judged_items=len(output.covered),
     )
