@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import shutil
 import uuid
 from pathlib import Path
 
@@ -15,12 +16,14 @@ WORK_DIR = Path(__file__).resolve().parents[1] / ".work" / "pytest-tmp"
 
 
 @pytest.fixture
-def db_path() -> Path:
+def work_dir() -> Path:
     WORK_DIR.mkdir(parents=True, exist_ok=True)
-    path = WORK_DIR / f"test-{uuid.uuid4().hex[:10]}.db"
+    path = WORK_DIR / f"case-{uuid.uuid4().hex[:10]}"
+    path.mkdir()
     yield path
-    for suffix in ("", "-journal", "-wal", "-shm"):
-        try:
-            Path(str(path) + suffix).unlink(missing_ok=True)
-        except OSError:
-            pass
+    shutil.rmtree(path, ignore_errors=True)
+
+
+@pytest.fixture
+def db_path(work_dir: Path) -> Path:
+    return work_dir / "test.db"
