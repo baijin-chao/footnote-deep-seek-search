@@ -1,8 +1,10 @@
 # Footnote — Deep Research Agent
 
+[![tests](https://github.com/baijin-chao/footnote-deep-seek-search/actions/workflows/tests.yml/badge.svg)](https://github.com/baijin-chao/footnote-deep-seek-search/actions/workflows/tests.yml)
+
 输入一个开放性问题，Agent 自主完成「拆解 → 检索 → 阅读 → 反思 → 写作」，输出每个结论都能溯源到原文的报告。
 
-> 当前版本：**v1.0**（引用可校验）　｜　进行中：V2 评测集
+> 当前版本：**v2.0-dev**（评测集与判分校准完成，待建挑战集）
 >
 > 已发布：`v0.1` 最小闭环 · `v1.0` 引用回填校验
 
@@ -18,6 +20,7 @@
 | [迭代路线](docs/01-roadmap.md) | V0–V5 每次迭代的目标与指标 |
 | [引用校验](docs/05-citation-verification.md) | 方法、阈值、实测结果与已知局限 |
 | [评测设计](docs/06-eval-design.md) | V2：20 题评测集、判分标准、失败分类、跑批工具 |
+| [判分校准](docs/08-calibration.md) | judge 与逐条标注的一致率、分歧分析与局限 |
 | [Bug 记录](docs/07-bugs.md) | 开发中真实踩过的坑：现象、根因、解决、教训 |
 | [未来展望](docs/04-outlook.md) | 浏览器界面设计、中期方向、长期加分项 |
 | [开发前置说明](docs/00-pre-dev-spec.md) | 技术选型、架构、数据模型、评测方案 |
@@ -37,6 +40,9 @@ REM   然后编辑 .env，填入 LLM_API_KEY 与 SEARCH_API_KEY
 
 REM 3. 跑一个问题
 scripts\run.cmd "什么是检索增强生成（RAG）？它的主要局限是什么？"
+
+REM 4. 跑评测（可选）
+scripts\eval.cmd --limit 5
 ```
 
 PowerShell 用户：`powershell -ExecutionPolicy Bypass -File scripts\run.ps1 "问题"`
@@ -47,10 +53,20 @@ PowerShell 用户：`powershell -ExecutionPolicy Bypass -File scripts\run.ps1 "�
 |---|---|
 | `--max-steps N` | 覆盖最大步数 |
 | `--max-cny X` | 覆盖成本上限（元） |
+| `--no-cache` | 禁用搜索缓存（评测时效题时用） |
 | `--quiet` | 只输出最终报告 |
 | `--out path.md` | 指定报告输出路径 |
 
-产物位置：报告 `.work/reports/<run_id>.md`，trace `.work/traces/<run_id>.jsonl`，数据库 `.work/dra.db`。
+评测命令 `scripts\eval.cmd`：`--limit N` 冒烟、`--tag 名称` 打标签便于对比、
+`--resume` 断点续跑、`--rejudge <目录>` 只重跑判分、`--dry-run` 只校验数据集。
+
+| 命令 | 作用 |
+|---|---|
+| `scripts\check.cmd` | 校验密钥与连通性 |
+| `scripts\test.cmd` | 跑单元测试（全离线） |
+
+产物位置：报告 `.work/reports/<run_id>.md`，trace `.work/traces/<run_id>.jsonl`，
+数据库 `.work/dra.db`，评测结果 `.work/eval/<时间戳>-<tag>/summary.md`。
 
 ---
 
@@ -101,15 +117,26 @@ trace.py    span 树 → SQLite + JSONL
 > ⚠️ **100% 说明这套题太简单，不能用来衡量优化收益**，只能当回归集。
 > 详见 [docs/07-bugs.md](docs/07-bugs.md) BUG-17；衡量提升需要另建挑战集。
 
+**判分校准。** 抽 6 题 / 16 个要点判定，judge 与逐条阅读报告的结果一致 15 个：
+
+| 指标 | 结果 | 门槛 |
+|---|---|---|
+| 要点级一致率 | **93.75%**（15/16） | ≥ 85% |
+| 题级通过判定一致 | 6/6 | — |
+| 单次判分稳定性 | 偶发抖动（同输入复跑结果不同） | 建议多次取多数 |
+
+方法与两处不一致的根因见 [docs/08-calibration.md](docs/08-calibration.md)。
+
 方法与局限见 [docs/05-citation-verification.md](docs/05-citation-verification.md)、
 评测设计见 [docs/06-eval-design.md](docs/06-eval-design.md)。
 
 ### 仍未解决的
 
 1. **评测集没有区分度**：20 题基线 100%，只能当回归集用，衡量提升需要另建挑战集
-2. 子问题覆盖不均，可能漏掉关键角度 → V3 反思回环
-3. 抓取失败只是跳过，没有分类重试 → V1 剩余部分
-4. 词面校验无法识别语义矛盾（数字被改但用词相同）→ V2 加模型校验
+2. **校准的标注由 agent 完成**，不是真人，严格的人机一致性待复标
+3. 子问题覆盖不均，可能漏掉关键角度 → V3 反思回环
+4. 抓取失败只是跳过，没有分类重试 → V1 剩余部分
+5. 词面校验无法识别语义矛盾（数字被改但用词相同）
 
 ---
 
