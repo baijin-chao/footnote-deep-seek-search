@@ -154,6 +154,8 @@ class ResearchAgent:
                 "tokens_out": stats.tokens_out,
                 "cost_cny": round(stats.cost_cny, 4),
                 "evidence": self.store.count_evidence(run_id),
+                "documents": self.store.count_evidence(run_id),
+                "fetch_attempts": stats.fetches,
                 "elapsed_s": round(elapsed, 1),
             },
             "stop_reason": stop_reason,

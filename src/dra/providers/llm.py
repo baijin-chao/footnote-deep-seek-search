@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 import time
+import contextlib as _contextlib
 from dataclasses import dataclass
 from typing import Any, TypeVar
 
@@ -32,8 +33,23 @@ class LLMResult:
     latency_ms: int
 
 
+class _NoopSpan:
+    """无 tracer 时的占位 span，保证调用方代码不用分支。"""
+
+    def set(self, **kwargs):
+        return self
+
+    def usage(self, *args, **kwargs):
+        return self
+
+
+class _NoopTracer:
+    def span(self, *args, **kwargs):
+        return _contextlib.nullcontext(_NoopSpan())
+
+
 class LLMClient:
-    def __init__(self, settings: Settings, tracer: Tracer, on_usage=None) -> None:
+    def __init__(self, settings: Settings, tracer=None, on_usage=None) -> None:
         self.s = settings
         self.tracer = tracer
         self.on_usage = on_usage
@@ -70,7 +86,8 @@ class LLMClient:
         if json_mode:
             body["response_format"] = {"type": "json_object"}
 
-        with self.tracer.span(span_name, kind="llm", model=model, json_mode=json_mode, thinking=thinking) as span:
+        with (self.tracer.span(span_name, kind="llm", model=model, json_mode=json_mode, thinking=thinking)
+              if self.tracer is not None else _contextlib.nullcontext(_NoopSpan())) as span:
             t0 = time.perf_counter()
             data = self._post_with_retry(body)
             latency_ms = int((time.perf_counter() - t0) * 1000)

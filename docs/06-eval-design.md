@@ -171,10 +171,15 @@ scripts\eval.cmd --max-cny 5
 |---|---|
 | `--dataset` | 数据集路径（默认 `eval/dataset/v1.jsonl`） |
 | `--limit N` | 只跑前 N 题，用于冒烟 |
-| `--concurrency N` | 并发数，默认 2（避免搜索 API 限流） |
+| `--tag` | 给这批结果打标签，便于对比（如 `before-reflect`） |
 | `--max-cny X` | 总成本上限，超出即停 |
 | `--resume` | 跳过已有结果的题（断点续跑） |
-| `--tag` | 给这批结果打标签，便于对比（如 `before-reflect`） |
+| `--no-cache` | 禁用搜索缓存（时效题评测用） |
+| `--dry-run` | 只校验数据集，不实际运行 |
+| `--quiet` | 不打印逐题进度 |
+
+> **V2 先串行跑**：并发写同一个 SQLite 需要处理锁竞争，而搜索缓存已经把额度问题压下去了，
+> 串行的稳定性收益更高。`--concurrency` 留到 V2.1，届时改用独立数据库文件。
 
 ### 5.2 断点续跑
 
