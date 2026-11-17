@@ -17,6 +17,7 @@
 | [迭代路线](docs/01-roadmap.md) | V0–V5 每次迭代的目标与指标 |
 | [引用校验](docs/05-citation-verification.md) | 方法、阈值、实测结果与已知局限 |
 | [评测设计](docs/06-eval-design.md) | V2：20 题评测集、判分标准、失败分类、跑批工具 |
+| [Bug 记录](docs/07-bugs.md) | 开发中真实踩过的坑：现象、根因、解决、教训 |
 | [未来展望](docs/04-outlook.md) | 浏览器界面设计、中期方向、长期加分项 |
 | [开发前置说明](docs/00-pre-dev-spec.md) | 技术选型、架构、数据模型、评测方案 |
 | [示例报告](docs/example-report-v0.md) | V0 真实产出 |

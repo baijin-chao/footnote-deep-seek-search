@@ -1,0 +1,235 @@
+# Bug 记录
+
+> 记录开发过程中真实遇到的问题、根因和解决方案。
+> 目的不是攒文档，而是避免同一个坑踩第二次——尤其是那些「不报错、但结果全错」的静默 bug。
+
+## 约定
+
+每条记录包含：**现象 → 根因 → 解决 → 教训**。
+修完 bug 与改完功能一样，都要在这里留一条（见 [SKILL.md](../SKILL.md) §7）。
+
+严重程度：
+
+| 标记 | 含义 |
+|---|---|
+| 🔴 静默 | 不报错，但结果错误，最危险 |
+| 🟠 阻断 | 功能完全不可用 |
+| 🟡 干扰 | 能用，但体验或效率受损 |
+
+---
+
+## 一、环境与工具链
+
+### BUG-01 🟠 工作区无法写入（`SetNamedSecurityInfoW failed`）
+
+**现象**：任何 `pwsh` 命令都返回 `Error: SetNamedSecurityInfoW failed (Win32 5): grantWrite(C:\agent)`，沙箱无法为工作区授权。
+
+**根因**：`C:\agent` 缺少当前用户的 `WRITE_OWNER` 权限，沙箱无法完成目录授权。
+
+**解决**：用配套的权限诊断脚本对 `C:\agent` 做一次修复（补齐当前用户完全控制 + 清理异常权限项），脚本自带备份与回滚命令。
+
+**教训**：报错信息里的 `grantWrite` 指向的是「授权动作失败」，不是「写入失败」，方向别搞反。
+
+---
+
+### BUG-02 🔴 依赖已安装却 `ModuleNotFoundError`
+
+**现象**：`pip install` 显示 `Successfully installed`，但 `import pydantic` 报 `cannot import name 'BaseModel' from 'pydantic' (unknown location)`；`icacls` 查看目录报 `Access is denied`。
+
+**根因**：pip 在受限令牌下创建的目录丢失了继承的访问权限，目录里只有 SYSTEM / Administrators，没有当前用户，程序读不进去。
+
+**解决**：
+
+```powershell
+icacls "C:\agent\vendor" /grant "*S-1-1-0:(OI)(CI)(RX)" /T /C /Q
+```
+
+用 SID 形式（`S-1-1-0` = Everyone）避免系统语言差异。这条已固化进 `scripts/setup.ps1`，重装依赖自动执行。
+
+**教训**：`Successfully installed` 只说明文件写完了，不代表**能读**。装完依赖要立刻 `import` 验证一次。
+
+---
+
+### BUG-03 🟠 pip 解包报 `PermissionError`
+
+**现象**：`pip download` / `pip install` 在临时目录创建 `.metadata` 时失败。
+
+**根因**：沙箱禁止在临时目录下创建可写的子目录（`tempfile.mkdtemp` 出来的目录权限异常）。
+
+**解决**：安装时把 `TMP` / `TEMP` 指向工作区（`.work\tmp`），并在完全权限下执行。
+
+**教训**：这是环境限制，不是 pip 的问题。解决办法是「绕开临时目录」，不是「重装 pip」。
+
+---
+
+### BUG-04 🟠 `'python' 不是内部或外部命令`，退出码 9009
+
+**现象**：`where python` 指向 `WindowsApps\python.exe`，执行即失败。
+
+**根因**：PATH 里的是应用商店占位符，不是真解释器。
+
+**解决**：统一用捆绑解释器的绝对路径，并把路径写进 `scripts/*.cmd`，支持 `DRA_PYTHON` 覆盖。
+
+**教训**：Windows 上 `python --version` 没输出但退出码非 0，八成是占位符。
+
+---
+
+### BUG-05 🟡 PowerShell 禁止运行 `.ps1`
+
+**现象**：`无法加载文件 run.ps1，因为在此系统上禁止运行脚本`。
+
+**根因**：执行策略为 Restricted。
+
+**解决**：主入口改用 `.cmd` 批处理（不受执行策略管辖），`.ps1` 保留但需 `-ExecutionPolicy Bypass`。
+
+---
+
+### BUG-06 🟡 批处理文件里写中文注释导致解析错乱
+
+**现象**：`run.cmd` 执行时报 `'hell' 不是内部或外部命令`、`'0.."' 不是内部或外部命令`，实际是 `%~dp0` 被错误解析。
+
+**根因**：`.cmd` 文件以 UTF-8 保存，但 cmd.exe 按 GBK 读取，中文注释的字节破坏了后续行解析。
+
+**解决**：批处理文件内**注释一律用 ASCII**，中文提示放到 Python 层输出。
+
+**教训**：编码问题不只影响输出，也会影响**脚本解析**。
+
+---
+
+### BUG-07 🟡 git 不在 PATH，push 报 TLS 错误
+
+**现象 1**：`Get-Command git` 找不到（实际装在 `C:\GIT\Git`，未进 PATH）。
+**现象 2**：`fatal: unable to access ...: schannel: AcquireCredentialsHandle failed: SEC_E_NO_CREDENTIALS`。
+
+**根因**：受限环境下 schannel 无法获取客户端凭据；且安装后未刷新 PATH。
+
+**解决**：
+
+```bat
+git config http.sslBackend openssl
+```
+
+**教训**：走 OpenSSL 后端绕开 Windows 证书存储，SSL 校验仍然开启，没有降低安全性。
+
+---
+
+### BUG-08 🟠 沙箱内无法 `git push`
+
+**现象**：`ls-remote` 正常，`push` 报 `could not read Username`，并伴随 `sh.exe: fatal error - NtCreateDirectoryObject(...): 0xC0000022`。
+
+**根因**：push 需要凭据助手，而助手进程要创建共享对象，沙箱禁止；同时非交互环境无法输入账号。
+
+**解决**：本地提交照常进行，push 由用户在普通终端执行（凭据走 GCM 浏览器授权）。
+
+**教训**：区分「读」与「写」——公开仓库的 `fetch`/`ls-remote` 不需要凭据，所以能通；`push` 需要，所以不通。
+
+---
+
+## 二、运行时
+
+### BUG-09 🟡 终端中文全是问号和方块
+
+**现象**：`run.cmd` 输出里中文变成 `?` 和 `◆`，但用户手敲的中文显示正常。
+
+**根因**：脚本按控制台代码页（936）输出 GBK，而终端实际按 UTF-8 渲染，两边不一致。
+
+**解决**：不再猜测代码页，强制 `SetConsoleOutputCP(65001)` + `stdout.reconfigure(encoding="utf-8")`，批处理里加 `chcp 65001`。
+
+**教训**：**不要根据 `GetConsoleOutputCP` 推断终端编码**——Windows Terminal 与 conhost 的行为不一致。
+
+---
+
+### BUG-10 🔴 judge 判分恒为 0 覆盖率
+
+**现象**：评测两题覆盖率都是 0%，但引用落地率 80%+，且结果里 `error` 为空。
+
+**根因**：judge 模型返回 `{"points": [{"point": "...", "covered": true}]}`，而 schema 定义的是 `covered` / `item`。Pydantic 默认忽略未知字段，于是 `covered` 取空数组——**不报错，直接算出 0%**。
+
+**解决**：
+
+1. 提示词里写明精确的字段名与示例
+2. `validation_alias` 兼容 `points` / `point` 等常见变体
+3. 补回归测试 `test_judge_output_accepts_point_alias`
+
+**教训**：这是本项目最危险的一类 bug——**评测工具自身出错时，会把「模型很差」伪装成结论**。
+凡是「指标异常整齐」的情况（全部 0%、全部 100%），先怀疑工具，再怀疑模型。
+
+---
+
+### BUG-11 🟡 pytest 用 `tmp_path` 报 `PermissionError`
+
+**现象**：`test_cache.py` 所有用例在 fixture 阶段报 `PermissionError: [WinError 5]`。
+
+**根因**：`tmp_path` 内部基于 `tempfile.mkdtemp`，正是 BUG-03 的同一个权限问题。
+
+**解决**：`conftest.py` 提供 `db_path` 夹具，在工作区 `.work/pytest-tmp` 下用普通 `mkdir` 创建。
+
+**教训**：框架自带的临时目录能力，在受限环境下不一定可用；测试基础设施也要适配环境。
+
+---
+
+### BUG-12 🟡 `pytest-cache-files-*` 残留目录无法删除
+
+**现象**：`git status` 报 `warning: could not open directory 'pytest-cache-files-...'`。
+
+**根因**：pytest 缓存目录同样继承 BUG-02 的权限问题，且被 git 扫描到。
+
+**解决**：`.gitignore` 加 `pytest-cache-files-*/`；`pytest.ini` 加 `-p no:cacheprovider` 不再生成。
+
+---
+
+## 三、设计问题（不是代码错误，但影响结论）
+
+### BUG-13 🟠 搜索缓存命中率只有 20%
+
+**现象**：同一问题连跑两次，第二次缓存命中率仍为 0–20%。
+
+**根因**：规划阶段拆出的子问题**每次措辞不同**（"内存占用与构建成本有何差异" vs "内存与构建成本差异"），缓存键对不上。这是我设计时的错误假设——以为同一问题会拆出相同子问题。
+
+**解决**：
+
+1. 规划阶段 `temperature=0`，减少漂移（但不能完全消除，MoE 不保证确定性）
+2. 缓存增加近似匹配：`max(Jaccard, 包含度) ≥ 0.8` 即命中
+3. 增加反义词保护（`优势/劣势`、`提升/下降` 等），避免把语义相反的问题当成同一个
+
+**效果**：命中率 20% → 60–80%。
+
+**教训**：**缓存的前提是「输入稳定」，而 LLM 的输出天然不稳定**。任何基于 LLM 输出做键的设计，都要先验证稳定性。
+
+---
+
+### BUG-14 🟡 引用校验把「改写」误判为「无支撑」
+
+**现象**：阈值 50% 时，语义完全正确但经过改写的断言被判 `unverified`（如 47%）。
+
+**根因**：词面覆盖率对改写的容错低，二元判定又放大了误判。
+
+**解决**：改为三级判定（强支撑 ≥50% / 弱支撑 30–50% / 未证实 <30%），并在报告里说明"弱支撑需人工复核"。
+
+**教训**：**指标要分级，不要二元**。二元阈值会制造大量假阳性，让人不再信任指标。
+
+---
+
+## 四、流程问题
+
+### BUG-15 🔴 整文件覆盖 `.env`，丢失用户密钥
+
+**现象**：修改配置时用整文件写入，把用户已填好的两个 API key 覆盖成占位值，且无备份。
+
+**根因**：为了改模型名和价格，直接重写了整个 `.env`，而不是定点修改那几行。
+
+**解决**：用户重新填入密钥；此后所有配置改动一律用**定点编辑**（只替换目标行），并在编辑前确认不触碰密钥行。
+
+**教训**：**含密钥的文件永远不要整文件覆盖**。哪怕只有两行要改，也要用最小替换。
+
+---
+
+### BUG-16 🟡 GitHub 间歇不可达
+
+**现象**：`github.com:443` 连接被重置，但 `api.github.com` 正常。
+
+**根因**：网络层间歇性干扰，与本地配置无关。
+
+**解决**：重试；必要时走代理，或改用 `ssh.github.com:443`。
+
+**教训**：报错前先分清「认证失败」和「网络不通」——两者的处理方式完全不同。

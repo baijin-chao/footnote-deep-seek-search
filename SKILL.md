@@ -211,6 +211,7 @@ scripts\test.cmd
 | `docs/01-roadmap.md` | 迭代进度变化（打勾/标注完成） |
 | `docs/03-usage-guide.md` | 用户可见的命令、参数、产物、配置变化 |
 | `docs/04-outlook.md` | 新增远期方向或被证伪的计划 |
+| `docs/07-bugs.md` | **修复任何 bug 后必须补一条**（现象/根因/解决/教训） |
 | `SKILL.md`（本文件） | 规则本身变化 |
 
 **指标写法**：必须是"同一套输入 + 可复现命令 + 具体数字"。禁止写"效果显著提升"。
@@ -307,6 +308,7 @@ git diff --cached --name-only | findstr /I ".env vendor .work"
 - [ ] `scripts\run.cmd "问题"` 端到端能跑通（改动涉及主链路时）
 - [ ] trace 里有对应的 span，且能在 JSONL 里看到
 - [ ] 相关文档已更新（见 §7）
+- [ ] 修的是 bug 的话，`docs/07-bugs.md` 已补记录
 - [ ] 提交信息符合 §8.1
 - [ ] `git status` 里没有不该提交的文件
 - [ ] 如果改了指标口径，README 的数字同步更新
