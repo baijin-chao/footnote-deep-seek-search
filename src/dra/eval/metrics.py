@@ -52,6 +52,8 @@ class QuestionResult:
     report_path: str = ""
     trace_path: str = ""
     error: str = ""
+    # 判定所用的原始信号，保留下来供重判分（rejudge）复用，避免重跑 agent
+    signals: dict[str, Any] = field(default_factory=dict)
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -73,6 +75,7 @@ class QuestionResult:
             "report": self.report_path,
             "trace": self.trace_path,
             "error": self.error,
+            "signals": self.signals,
         }
 
 
@@ -152,6 +155,7 @@ def evaluate(question: Question, run: dict[str, Any], judged: dict[str, Any]) ->
         report_path=str(run.get("report_path", "")),
         trace_path=str(run.get("trace", "")),
         error=str(run.get("error") or ""),
+        signals=signals,
     )
 
 

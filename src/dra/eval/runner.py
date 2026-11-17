@@ -17,7 +17,7 @@ from ..config import Settings
 from ..providers.llm import LLMClient
 from .dataset import Question, load_dataset
 from .judge import judge_report
-from .metrics import QuestionResult, evaluate, summarize
+from .metrics import QuestionResult, classify_failure, evaluate, summarize
 from .report import write_summary
 
 
@@ -73,6 +73,7 @@ def _restore(item: dict[str, Any]) -> QuestionResult:
         report_path=str(item.get("report", "")),
         trace_path=str(item.get("trace", "")),
         error=str(item.get("error", "")),
+        signals=dict(item.get("signals") or {}),
     )
 
 
@@ -149,3 +150,89 @@ def _run_one(settings: Settings, question: Question, judge_llm: LLMClient, out_d
     judged = judge_report(question, report_text, judge_llm)
     run["report_path"] = str(report_path)
     return evaluate(question, run, judged.as_dict())
+
+
+def rejudge(settings: Settings, dataset_path: Path, run_dir: Path, quiet: bool = False) -> Path:
+    """只重跑判分，不重跑 agent。
+
+    用途：调整 judge 提示词后重新校准，成本只有判分本身（约 1/20 的完整跑批）。
+    注意：只重算与判分相关的字段（覆盖率、是否拒答、归因、通过与否），
+    成本与延迟沿用原记录。
+    """
+    run_dir = Path(run_dir)
+    results_path = run_dir / "results.jsonl"
+    if not results_path.exists():
+        raise FileNotFoundError(f"找不到结果文件：{results_path}")
+
+    questions = {q.id: q for q in load_dataset(dataset_path)}
+    rows = [json.loads(line) for line in results_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+    llm = LLMClient(settings)
+    updated: list[QuestionResult] = []
+    flips: list[tuple[str, bool, str | None]] = []
+    try:
+        for row in rows:
+            question = questions.get(row["id"])
+            if question is None:
+                continue
+            report_path = Path(row.get("report") or "")
+            report_text = report_path.read_text(encoding="utf-8") if report_path.exists() else ""
+
+            judged = judge_report(question, report_text, llm)
+            signals = dict(row.get("signals") or {})
+            if not signals:
+                # 兼容早期没有 signals 字段的结果：只重建判分需要的那部分
+                status = str(row.get("status", "done"))
+                signals = {
+                    "status": status,
+                    "error": row.get("error", ""),
+                    "evidence": 1 if status in ("done", "budget_exceeded") else 0,
+                    "documents": 1,
+                    "fetch_attempts": 1,
+                    "stop_reason": "",
+                    "grounded_rate": float(row.get("grounded_rate", 0.0)),
+                }
+            signals.update(
+                {
+                    "covered_items": judged.covered_items,
+                    "refused": judged.refused,
+                    "factual_errors": judged.factual_errors,
+                }
+            )
+            failure = classify_failure(question, signals) if not judged.error else str(row.get("failure") or "crash")
+            passed = failure is None and not judged.error
+
+            new_row = dict(row)
+            new_row.update(
+                {
+                    "covered_items": judged.covered_items,
+                    "coverage": round(judged.covered_items / judged.total_items, 3) if judged.total_items else 0.0,
+                    "refused": judged.refused,
+                    "factual_errors": judged.factual_errors,
+                    "failure": failure,
+                    "passed": passed,
+                    "signals": signals,
+                }
+            )
+            updated.append(_restore(new_row))
+            if bool(row.get("passed")) != passed:
+                flips.append((question.id, bool(row.get("passed")), failure))
+    finally:
+        llm.close()
+
+    summary = summarize(updated)
+    meta = {"dataset": str(dataset_path), "model": settings.llm_model, "tag": f"rejudge:{run_dir.name}"}
+    out_dir = run_dir / f"rejudge-{datetime.now().strftime('%H%M%S')}"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    summary_path = write_summary(out_dir, summary, updated, meta)
+    (out_dir / "results.jsonl").write_text(
+        "\n".join(json.dumps(r.as_dict(), ensure_ascii=False) for r in updated) + "\n", encoding="utf-8"
+    )
+
+    if not quiet:
+        print(f"重判完成：{len(updated)} 题")
+        for qid, was, failure in flips:
+            print(f"  {qid}: {'通过' if was else '失败'} → {'失败' if was else '通过'}（{failure or '通过'}）")
+        print(f"成功率 {summary['success_rate']:.0%}（{summary['passed']}/{summary['total']}）")
+        print(f"报告：{summary_path}")
+    return summary_path

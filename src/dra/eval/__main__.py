@@ -9,7 +9,7 @@ from pathlib import Path
 from ..config import REPO_ROOT, Settings
 from ..util import setup_console
 from .dataset import DatasetError, load_dataset
-from .runner import EvalOptions, run_eval
+from .runner import EvalOptions, rejudge, run_eval
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -23,6 +23,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--out", default=str(REPO_ROOT / ".work" / "eval"), help="结果输出目录")
     p.add_argument("--quiet", action="store_true", help="不打印逐题进度")
     p.add_argument("--dry-run", action="store_true", help="只校验数据集，不实际运行")
+    p.add_argument("--rejudge", default="", help="对已有结果目录只重跑判分（不重跑 agent）")
     return p
 
 
@@ -49,6 +50,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"数据集 OK：{len(questions)} 题")
         for cat, count in sorted(categories.items()):
             print(f"  {cat:<12} {count}")
+        return 0
+
+    if args.rejudge:
+        rejudge(settings, Path(args.dataset), Path(args.rejudge), quiet=args.quiet)
         return 0
 
     options = EvalOptions(
