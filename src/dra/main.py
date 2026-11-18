@@ -70,6 +70,9 @@ def main(argv: list[str] | None = None) -> int:
         settings = _replace(settings, budget_max_cny=args.max_cny)
     if args.no_cache:
         settings = _replace(settings, search_cache=False)
+    if args.mode:
+        # 模式要写回 settings，provider 与录制器都从 settings 读它
+        settings = _replace(settings, run_mode=args.mode)
     mode = args.mode or settings.run_mode
 
     question = " ".join(args.question).strip()

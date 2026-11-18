@@ -48,6 +48,10 @@ notepad .work\reports\<run_id>.md
 | `scripts\run.cmd "问题" --max-cny 0.05` | 限制单次成本上限 |
 | `scripts\run.cmd "问题" --out D:\a.md` | 指定报告输出路径 |
 | `scripts\run.cmd "问题" --no-cache` | 禁用搜索缓存（时效题评测用） |
+| `scripts\run.cmd "问题" --mode record` | 真实调用，并把响应录进 `fixtures/` |
+| `scripts\run.cmd "问题" --mode mock` | 只读 `fixtures/`，不联网（断网演示） |
+| `scripts\eval.cmd --limit 5` | 跑评测（前 5 题冒烟） |
+| `scripts\test.cmd` | 跑单元测试（全离线） |
 | `scripts\run.cmd --help` | 查看全部参数 |
 | `scripts\check.cmd` | 校验 `.env` 与 API 连通性 |
 | `scripts\setup.ps1` | 重装依赖到 `vendor/`（需管理员） |
@@ -164,7 +168,40 @@ Agent 表现与问题质量强相关。实测下来：
 
 ---
 
-## 七、当前能力边界（V1）
+## 七、离线演示（录制回放）
+
+网络不稳、额度耗尽、或面试现场没有网时，用录制回放把整个流程跑完。
+
+### 用法
+
+```bat
+REM 1. 有网时录一次（把 LLM / 搜索 / 抓取的响应存到 fixtures/）
+scripts\run.cmd "准备演示的问题" --mode record --no-cache
+
+REM 2. 现场用 mock 重放（不发任何网络请求）
+scripts\run.cmd "准备演示的问题" --mode mock
+```
+
+实测：真实调用约 25 秒，重放约 **1 秒**，证据数与报告内容一致。
+
+### 规则
+
+| 要点 | 说明 |
+|---|---|
+| 问题必须**完全一致** | 请求参数参与哈希，问法不同就找不到录制 |
+| 录制时加 `--no-cache` | 否则命中缓存会跳过真实请求，录不到内容 |
+| mock 下**禁用搜索缓存** | 缓存返回的文档可能与录制时不同，导致对不上 |
+| 缺录制会**直接报错** | 不会静默降级成真实调用，报错信息里有缺失文件路径 |
+
+### 当前局限
+
+- `fixtures/` 会进仓库（不含密钥，但含网页正文），体积随录制次数增长
+- 录制内容是一次性的，数据变化后需要重录
+- 只录了 LLM / 搜索 / 抓取三类，其他调用（如未来接的第三方 API）需要自己接入录制器
+
+---
+
+## 八、当前能力边界（V1）
 
 诚实地说清楚它现在**不能**做什么，避免误用：
 

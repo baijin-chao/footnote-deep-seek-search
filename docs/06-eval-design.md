@@ -220,8 +220,10 @@ CREATE TABLE search_cache (
 
 规则：
 
-- `RUN_MODE=live` 先读缓存，未命中再请求并写入（当前唯一已实现的模式）
-- `RUN_MODE=record / mock`（录制回放）仍为计划项，未实现
+- `RUN_MODE=live`：先读缓存，未命中再请求并写入
+- `RUN_MODE=record`：正常调用，并把 LLM / 搜索 / 抓取的响应写入 `fixtures/`
+- `RUN_MODE=mock`：只读录制，**同时禁用搜索缓存**——缓存会返回与录制时不同的文档，
+  导致写作阶段的 LLM 请求对不上；mock 缺录制时直接报错，不静默降级
 - 缓存有效期默认 7 天（`SEARCH_CACHE_TTL_DAYS`），过期重新抓，兼顾时效性
 - `--no-cache` 参数强制绕过，用于新鲜度对比实验
 

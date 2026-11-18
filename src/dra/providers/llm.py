@@ -13,6 +13,7 @@ import httpx
 from pydantic import BaseModel, ValidationError
 
 from ..config import Settings
+from ..recording import Recorder, make_key
 from ..trace import Tracer
 
 T = TypeVar("T", bound=BaseModel)
@@ -53,6 +54,7 @@ class LLMClient:
         self.s = settings
         self.tracer = tracer
         self.on_usage = on_usage
+        self.recorder = Recorder(settings.run_mode, settings.fixtures_dir)
         self._http = httpx.Client(timeout=settings.llm_timeout)
 
     def close(self) -> None:
@@ -86,21 +88,39 @@ class LLMClient:
         if json_mode:
             body["response_format"] = {"type": "json_object"}
 
+        key = make_key("llm", model, messages, body.get("max_tokens"), body.get("temperature"), thinking, json_mode)
+
         with (self.tracer.span(span_name, kind="llm", model=model, json_mode=json_mode, thinking=thinking)
               if self.tracer is not None else _contextlib.nullcontext(_NoopSpan())) as span:
-            t0 = time.perf_counter()
-            data = self._post_with_retry(body)
-            latency_ms = int((time.perf_counter() - t0) * 1000)
+            latency_ms = 0
+            if self.recorder.mode == "mock":
+                payload = self.recorder.require("llm", key, hint=f"model={model}")
+                text = payload.get("text", "")
+                reasoning = payload.get("reasoning", "")
+                tokens_in = int(payload.get("tokens_in", 0))
+                tokens_out = int(payload.get("tokens_out", 0))
+                span.set(replayed=True)
+            else:
+                t0 = time.perf_counter()
+                data = self._post_with_retry(body)
+                latency_ms = int((time.perf_counter() - t0) * 1000)
 
-            usage = data.get("usage") or {}
-            tokens_in = int(usage.get("prompt_tokens") or 0)
-            tokens_out = int(usage.get("completion_tokens") or 0)
+                usage = data.get("usage") or {}
+                tokens_in = int(usage.get("prompt_tokens") or 0)
+                tokens_out = int(usage.get("completion_tokens") or 0)
+
+                message = (data.get("choices") or [{}])[0].get("message") or {}
+                text = message.get("content") or ""
+                reasoning = message.get("reasoning_content") or ""
+
+                if self.recorder.mode == "record":
+                    self.recorder.save(
+                        "llm",
+                        key,
+                        {"text": text, "reasoning": reasoning, "tokens_in": tokens_in, "tokens_out": tokens_out},
+                    )
+
             cost = self.s.cost_cny(model, tokens_in, tokens_out)
-
-            message = (data.get("choices") or [{}])[0].get("message") or {}
-            text = message.get("content") or ""
-            reasoning = message.get("reasoning_content") or ""
-
             span.usage(tokens_in, tokens_out, cost)
             span.set(latency_ms=latency_ms, chars_out=len(text))
             if self.on_usage is not None:

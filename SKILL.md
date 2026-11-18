@@ -25,7 +25,7 @@
 | I3 | **每个外部调用都有 span** | LLM / 搜索 / 抓取 必须包在 `tracer.span(...)` 里，否则 trace 断链 |
 | I4 | **预算在循环内检查** | 任何可能循环的地方（GATHER、反思轮）都要调 `_budget_reason` |
 | I5 | **引用必须可校验** | 报告里的 `[En]` 要么能通过 `verify.py`，要么被标为未证实；不允许"只写编号不校验" |
-| I6 | **离线可测** | 新增依赖必须同时提供 mock 路径，保证单元测试不联网。录制回放（`RUN_MODE=record/mock`）仍是计划项，未实现 |
+| I6 | **可离线运行** | 新增外部依赖必须提供 mock 路径；provider 必须实现录制（`RUN_MODE=record/mock`），否则断网时无法演示 |
 
 ---
 
@@ -175,7 +175,8 @@ self._emit("error", message="...")
 
 1. **接口统一**：`search(query) -> list[SearchResult]` / `fetch(url) -> Page` / `complete(messages) -> LLMResult`
 2. **异常语义化**：抛自己的异常类，不把 `httpx` 的异常泄漏到上层
-3. **可离线测试**：单测用 `respx` 打桩，不联网；录制回放（record/mock）尚未实现，属 V4 计划
+3. **可录制**：`RUN_MODE=record` 把响应写入 `fixtures/`，`mock` 只读回放。失败的响应也要录，
+   否则重放时证据数会与录制时不一致
 
 新增 provider 的检查清单：
 

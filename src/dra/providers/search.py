@@ -6,7 +6,9 @@ from dataclasses import dataclass
 
 import httpx
 
+from ..cache import normalize_query
 from ..config import Settings
+from ..recording import Recorder, make_key
 from ..trace import Tracer
 
 
@@ -27,12 +29,18 @@ class TavilySearch:
 
     def __init__(self, settings: Settings) -> None:
         self.s = settings
+        self.recorder = Recorder(settings.run_mode, settings.fixtures_dir)
         self._http = httpx.Client(timeout=settings.search_timeout)
 
     def close(self) -> None:
         self._http.close()
 
     def search(self, query: str) -> list[SearchResult]:
+        key = make_key("search", self.name, normalize_query(query))
+        if self.recorder.mode == "mock":
+            payload = self.recorder.require("search", key, hint=f"query={query}")
+            return [SearchResult(**item) for item in payload.get("results", [])]
+
         if not self.s.search_api_key:
             raise SearchError("SEARCH_API_KEY 未配置")
         resp = self._http.post(
@@ -62,6 +70,8 @@ class TavilySearch:
                     score=float(item.get("score") or 0.0),
                 )
             )
+        if self.recorder.mode == "record":
+            self.recorder.save("search", key, {"results": [r.__dict__ for r in out]})
         return out
 
 
@@ -70,12 +80,18 @@ class BochaSearch:
 
     def __init__(self, settings: Settings) -> None:
         self.s = settings
+        self.recorder = Recorder(settings.run_mode, settings.fixtures_dir)
         self._http = httpx.Client(timeout=settings.search_timeout)
 
     def close(self) -> None:
         self._http.close()
 
     def search(self, query: str) -> list[SearchResult]:
+        key = make_key("search", self.name, normalize_query(query))
+        if self.recorder.mode == "mock":
+            payload = self.recorder.require("search", key, hint=f"query={query}")
+            return [SearchResult(**item) for item in payload.get("results", [])]
+
         if not self.s.bocha_api_key:
             raise SearchError("BOCHA_API_KEY 未配置")
         resp = self._http.post(
@@ -101,6 +117,8 @@ class BochaSearch:
                     score=0.0,
                 )
             )
+        if self.recorder.mode == "record":
+            self.recorder.save("search", key, {"results": [r.__dict__ for r in out]})
         return out
 
 

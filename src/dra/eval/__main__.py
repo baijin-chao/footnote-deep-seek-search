@@ -24,6 +24,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--quiet", action="store_true", help="不打印逐题进度")
     p.add_argument("--dry-run", action="store_true", help="只校验数据集，不实际运行")
     p.add_argument("--rejudge", default="", help="对已有结果目录只重跑判分（不重跑 agent）")
+    p.add_argument("--mode", default="", choices=["", "live", "record", "mock"], help="录制回放模式")
     return p
 
 
@@ -32,10 +33,15 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
 
     settings = Settings.load()
-    if args.no_cache:
+    if args.no_cache or args.mode:
         from dataclasses import replace
 
-        settings = replace(settings, search_cache=False)
+        updates: dict = {}
+        if args.no_cache:
+            updates["search_cache"] = False
+        if args.mode:
+            updates["run_mode"] = args.mode
+        settings = replace(settings, **updates)
 
     try:
         questions = load_dataset(Path(args.dataset))

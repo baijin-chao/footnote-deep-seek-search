@@ -8,6 +8,7 @@ from dataclasses import dataclass
 import httpx
 
 from ..config import Settings
+from ..recording import Recorder, make_key
 from ..trace import Tracer
 from ..util import truncate
 
@@ -33,6 +34,7 @@ class Page:
 class Fetcher:
     def __init__(self, settings: Settings) -> None:
         self.s = settings
+        self.recorder = Recorder(settings.run_mode, settings.fixtures_dir)
         self._http = httpx.Client(
             timeout=settings.fetch_timeout,
             follow_redirects=True,
@@ -43,6 +45,36 @@ class Fetcher:
         self._http.close()
 
     def fetch(self, url: str, tracer: Tracer | None = None) -> Page:
+        key = make_key("fetch", url)
+        if self.recorder.mode == "mock":
+            payload = self.recorder.require("fetch", key, hint=f"url={url}")
+            return Page(
+                url=payload.get("url", url),
+                final_url=payload.get("final_url", url),
+                status=int(payload.get("status", 200)),
+                title=payload.get("title", ""),
+                text=payload.get("text", ""),
+                error=payload.get("error"),
+            )
+
+        page = self._fetch_live(url)
+        if self.recorder.mode == "record":
+            # 失败的页面也要录：否则重放时这一页会凭空消失，导致证据数与录制时不一致
+            self.recorder.save(
+                "fetch",
+                key,
+                {
+                    "url": page.url,
+                    "final_url": page.final_url,
+                    "status": page.status,
+                    "title": page.title,
+                    "text": page.text,
+                    "error": page.error,
+                },
+            )
+        return page
+
+    def _fetch_live(self, url: str) -> Page:
         page = Page(url=url)
         try:
             resp = self._http.get(url)

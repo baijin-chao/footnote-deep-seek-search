@@ -55,6 +55,7 @@ PowerShell 用户：`powershell -ExecutionPolicy Bypass -File scripts\run.ps1 "�
 | `--max-steps N` | 覆盖最大步数 |
 | `--max-cny X` | 覆盖成本上限（元） |
 | `--no-cache` | 禁用搜索缓存（评测时效题时用） |
+| `--mode record` / `--mode mock` | 录制响应 / 离线重放（断网演示） |
 | `--quiet` | 只输出最终报告 |
 | `--out path.md` | 指定报告输出路径 |
 
@@ -150,7 +151,6 @@ trace.py    span 树 → SQLite + JSONL
 4. 子问题覆盖不均，可能漏掉关键角度 → V3 反思回环
 5. 抓取失败只是跳过，没有分类重试 → V1 剩余部分
 6. 词面校验无法识别语义矛盾（数字被改但用词相同）
-7. **录制回放（record/mock）尚未实现**：断网时无法完整演示，目前只能靠搜索缓存顶一部分
 
 ---
 

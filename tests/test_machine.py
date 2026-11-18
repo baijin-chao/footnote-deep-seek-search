@@ -205,3 +205,26 @@ def test_trace_file_is_written(build_agent):
     trace = Path(result["trace"])
     assert trace.exists()
     assert '"name": "plan"' in trace.read_text(encoding="utf-8")
+
+
+def test_mock_mode_surfaces_missing_recording(work_dir, monkeypatch):
+    """mock 缺录制时必须整体失败，不能被当成「子问题失败」吞掉。
+
+    这里用真实的 LLMClient（而不是桩），因为要验证的正是它的录制检查。
+    """
+    settings = Settings(
+        llm_api_key="k",
+        search_api_key="k",
+        db_path=work_dir / "dra.db",
+        trace_dir=work_dir / "traces",
+        fixtures_dir=work_dir / "empty-fixtures",
+        run_mode="mock",
+    )
+    monkeypatch.setattr(machine, "build_search", lambda s, cache=None: StubSearch(default_results()))
+    agent = machine.ResearchAgent(settings)
+
+    result = agent.run("RAG 是什么")
+
+    assert result["status"] == "failed"
+    assert "RecordingError" in (result["error"] or "")
+    assert "fixtures" in (result["error"] or "")

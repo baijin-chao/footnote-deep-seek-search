@@ -15,6 +15,7 @@ from ..models import Stats
 from ..providers.fetch import Fetcher
 from ..providers.llm import LLMClient
 from ..providers.search import SearchChain, build_search
+from ..recording import RecordingError
 from ..store import Store
 from ..trace import Tracer
 from ..util import now_iso, short_id
@@ -40,7 +41,10 @@ class ResearchAgent:
         stats = Stats()
         tracer = Tracer(run_id, self.s.trace_dir, self.store)
         llm = LLMClient(self.s, tracer, on_usage=lambda tin, tout, cost: stats.add_llm(tin, tout, cost))
-        cache = SearchCache(self.s.db_path, self.s.search_cache_ttl_days) if self.s.search_cache else None
+        # mock 模式必须完全按录制重放：缓存会返回与录制时不同的文档，
+        # 导致后续 LLM 请求的 key 对不上，因此 mock 下禁用缓存
+        use_cache = self.s.search_cache and self.s.run_mode != "mock"
+        cache = SearchCache(self.s.db_path, self.s.search_cache_ttl_days) if use_cache else None
         search: SearchChain = build_search(self.s, cache=cache)
         fetcher = Fetcher(self.s)
         reader = Reader(self.s, fetcher)
@@ -87,6 +91,9 @@ class ResearchAgent:
                             break
                         try:
                             self._gather_one(run_id, row, search, reader, tracer, stats)
+                        except RecordingError:
+                            # mock 模式缺录制是配置问题，必须立刻失败，不能被当成「子问题失败」吞掉
+                            raise
                         except Exception as exc:
                             self.store.set_subq_status(row["id"], "failed")
                             self._emit("subq_failed", question=row["text"], error=str(exc))
