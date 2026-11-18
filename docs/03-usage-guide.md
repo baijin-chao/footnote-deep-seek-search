@@ -69,6 +69,7 @@ notepad .work\reports\<run_id>.md
 | `.work\reports\<run_id>.md` | 最终报告 | 阅读、演示 |
 | `.work\traces\<run_id>.jsonl` | 每个 span 的耗时/token/父子关系 | 分析哪一步慢、哪一步失败 |
 | `.work\dra.db` | 结构化全量数据（run/子问题/证据/报告/span） | 复查、二次统计 |
+| `fixtures\` | `--mode record` 录下的 LLM / 搜索 / 抓取响应 | 离线回放、演示兜底 |
 | 终端输出 | 实时进度 | 观察 Agent 是否"跑偏" |
 
 ### 看 trace（排查问题的主要手段）

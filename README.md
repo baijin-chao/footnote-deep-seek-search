@@ -136,6 +136,14 @@ trace.py    span 树 → SQLite + JSONL
 方法与局限见 [docs/05-citation-verification.md](docs/05-citation-verification.md)、
 评测设计见 [docs/06-eval-design.md](docs/06-eval-design.md)。
 
+**离线演示。** 仓库内附一份完整录制（21 个文件 / 313 KB），`scripts\demo.cmd` 直接回放：
+
+| 指标 | 真实调用 | 离线重放 |
+|---|---|---|
+| 耗时 | 41.6s | **1.3s** |
+| 证据 / 步数 | 10 / 7 | 10 / 7（一致） |
+| token | 7159 / 1353 | 7159 / 1353（一致） |
+
 **挑战集。** 另建 12 道刻意设计成弱点的题（精确数字、口径差异、需要计算、前提有错），单轮基线：
 
 | 指标 | 结果 |

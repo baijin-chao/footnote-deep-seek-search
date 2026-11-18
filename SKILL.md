@@ -46,6 +46,7 @@ src/dra/
 ├── store.py      SQLite 持久化
 ├── trace.py      span 埋点
 ├── verify.py     引用校验
+├── recording.py  录制回放（record / mock，读写 fixtures/）
 ├── models.py     内部数据结构
 └── util.py       无状态工具函数
 ```

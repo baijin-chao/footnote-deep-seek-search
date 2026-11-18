@@ -22,7 +22,7 @@
                     ▼
 ┌──────────────────────────────────────────────┐
 │ 基础设施  store.py（SQLite） trace.py verify │
-│           cache.py config.py util.py         │
+│           cache.py recording.py config.py    │
 └──────────────────────────────────────────────┘
 ```
 
@@ -45,6 +45,7 @@
 | `store.py` | 表结构与读写 | 任何业务判断 |
 | `trace.py` | span 树、JSONL 落盘 | 指标计算 |
 | `verify.py` | 引用回填校验（词面覆盖率） | 语义判断 |
+| `recording.py` | 按请求参数哈希存取 `fixtures/`，支撑 record / mock | 决定何时录制或回放 |
 | `cache.py` | 搜索结果缓存（精确 + 近似命中） | 决定用不用缓存 |
 | `eval/*` | 跑批、判分、指标、报告 | 改变 agent 行为 |
 
@@ -111,7 +112,7 @@ search_cache (cache_key, provider, query, results, created_at)
 
 | 要加什么 | 改哪里 | 注意 |
 |---|---|---|
-| 新搜索源 | `providers/search.py` 新增类 + `build_search` 注册 | 必须自定义异常、加超时、留 fixture |
+| 新搜索源 | `providers/search.py` 新增类 + `build_search` 注册 | 必须自定义异常、加超时、**接录制器**、留 fixture |
 | 新模型 | `.env` 改 `LLM_MODEL` | 计价参数要同时更新 |
 | 新状态 | `machine.py` + 事件协议 + 本文档 | 四件事缺一不可（见 SKILL.md §4.1） |
 | 新指标 | `eval/metrics.py` + `report.py` | 分母必须含失败题 |
