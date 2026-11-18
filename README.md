@@ -68,6 +68,7 @@ PowerShell 用户：`powershell -ExecutionPolicy Bypass -File scripts\run.ps1 "�
 | 命令 | 作用 |
 |---|---|
 | `scripts\check.cmd` | 校验密钥与连通性 |
+| `scripts\check_docs.cmd` | 检查文档是否落后于代码 |
 | `scripts\test.cmd` | 跑单元测试（全离线） |
 | `scripts\demo.cmd` | 回放已录制的演示（不联网，约 1 秒） |
 

@@ -44,6 +44,9 @@
 | `providers/fetch.py` | HTTP 抓取、正文抽取 | 可信度判断 |
 | `store.py` | 表结构与读写 | 任何业务判断 |
 | `trace.py` | span 树、JSONL 落盘 | 指标计算 |
+| `config.py` | `.env` → `Settings`，含计价与预算参数 | 业务逻辑 |
+| `models.py` | 内部数据结构（子问题、证据、统计） | 持久化 |
+| `util.py` | 无状态工具（哈希、截断、控制台编码） | 业务语义 |
 | `verify.py` | 引用回填校验（词面覆盖率） | 语义判断 |
 | `recording.py` | 按请求参数哈希存取 `fixtures/`，支撑 record / mock | 决定何时录制或回放 |
 | `cache.py` | 搜索结果缓存（精确 + 近似命中） | 决定用不用缓存 |

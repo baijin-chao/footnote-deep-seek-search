@@ -21,3 +21,6 @@ jobs:
         run: python -m pytest -q
         env:
           PYTHONPATH: src
+
+      - name: 文档与代码同步检查
+        run: python scripts/check_docs.py

@@ -52,6 +52,7 @@ notepad .work\reports\<run_id>.md
 | `scripts\run.cmd "问题" --mode mock` | 只读 `fixtures/`，不联网（断网演示） |
 | `scripts\eval.cmd --limit 5` | 跑评测（前 5 题冒烟） |
 | `scripts\test.cmd` | 跑单元测试（全离线） |
+| `scripts\check_docs.cmd` | 检查文档是否落后于代码 |
 | `scripts\run.cmd --help` | 查看全部参数 |
 | `scripts\check.cmd` | 校验 `.env` 与 API 连通性 |
 | `scripts\setup.ps1` | 重装依赖到 `vendor/`（需管理员） |
