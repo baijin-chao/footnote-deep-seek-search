@@ -44,6 +44,9 @@ scripts\run.cmd "什么是检索增强生成（RAG）？它的主要局限是什
 
 REM 4. 跑评测（可选）
 scripts\eval.cmd --limit 5
+
+REM 5. 离线演示（用仓库内已录制的响应，不联网）
+scripts\demo.cmd
 ```
 
 PowerShell 用户：`powershell -ExecutionPolicy Bypass -File scripts\run.ps1 "问题"`
@@ -66,6 +69,7 @@ PowerShell 用户：`powershell -ExecutionPolicy Bypass -File scripts\run.ps1 "�
 |---|---|
 | `scripts\check.cmd` | 校验密钥与连通性 |
 | `scripts\test.cmd` | 跑单元测试（全离线） |
+| `scripts\demo.cmd` | 回放已录制的演示（不联网，约 1 秒） |
 
 产物位置：报告 `.work/reports/<run_id>.md`，trace `.work/traces/<run_id>.jsonl`，
 数据库 `.work/dra.db`，评测结果 `.work/eval/<时间戳>-<tag>/summary.md`。

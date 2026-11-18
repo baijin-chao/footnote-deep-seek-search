@@ -1,0 +1,13 @@
+{
+  "kind": "fetch",
+  "key": "11ac870dbf70572a",
+  "recorded_at": "2026-11-18T20:40:47+08:00",
+  "payload": {
+    "url": "https://www.intersystems.com/cn/resources/what-are-vector-databases-and-how-do-they-work",
+    "final_url": "https://www.intersystems.com/cn/resources/what-are-vector-databases-and-how-do-they-work",
+    "status": 403,
+    "title": "",
+    "text": "",
+    "error": "HTTP 403"
+  }
+}

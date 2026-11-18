@@ -1,0 +1,13 @@
+{
+  "kind": "fetch",
+  "key": "7a9a41629ca1f6e4",
+  "recorded_at": "2026-11-18T20:41:11+08:00",
+  "payload": {
+    "url": "https://zhuanlan.zhihu.com/p/1944438806313959817",
+    "final_url": "https://zhuanlan.zhihu.com/p/1944438806313959817",
+    "status": 403,
+    "title": "",
+    "text": "",
+    "error": "HTTP 403"
+  }
+}

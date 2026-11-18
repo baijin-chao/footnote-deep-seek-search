@@ -1,0 +1,13 @@
+{
+  "kind": "fetch",
+  "key": "7302542d423b03d1",
+  "recorded_at": "2026-11-18T20:41:06+08:00",
+  "payload": {
+    "url": "https://support.huaweicloud.com/bestpractice-css/css_07_0050.html",
+    "final_url": "",
+    "status": 0,
+    "title": "",
+    "text": "",
+    "error": "RemoteProtocolError: peer closed connection without sending complete message body (incomplete chunked read)"
+  }
+}
