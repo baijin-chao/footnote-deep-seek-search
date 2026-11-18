@@ -150,6 +150,7 @@ trace.py    span 树 → SQLite + JSONL
 4. 子问题覆盖不均，可能漏掉关键角度 → V3 反思回环
 5. 抓取失败只是跳过，没有分类重试 → V1 剩余部分
 6. 词面校验无法识别语义矛盾（数字被改但用词相同）
+7. **录制回放（record/mock）尚未实现**：断网时无法完整演示，目前只能靠搜索缓存顶一部分
 
 ---
 
@@ -159,11 +160,13 @@ trace.py    span 树 → SQLite + JSONL
 src/dra/           主代码
   agent/           状态机与各角色
   providers/       LLM / 搜索 / 抓取
-  eval/            评测（V2 开始填充）
-scripts/           启动与安装
-docs/              设计文档与迭代路线
+  eval/            评测：数据集校验、判分、指标、跑批
+eval/dataset/      评测集（v1 回归集 / hard 挑战集）
+scripts/           启动、安装、检查、测试、评测
+tests/             离线单元测试（48 个）
+.github/           CI（push 时跑 pytest）
+docs/              设计文档与迭代记录
 vendor/            依赖（不提交）
-fixtures/          录制回放（V1 开始填充）
 ```
 
 ## 配置
@@ -173,8 +176,8 @@ fixtures/          录制回放（V1 开始填充）
 ## 已知环境约束（本机）
 
 - 依赖装在 `vendor/`，靠 `PYTHONPATH` 注入，不使用 venv
-- pip 创建的目录权限异常，安装后需对本目录树追加读权限（见 `docs/01-roadmap.md` 的运维备注）
-- 未安装 git；如需版本历史请先装 Git for Windows
+- pip 创建的目录权限异常，安装后需对本目录树追加读权限（见 `scripts/setup.ps1`）
+- Git 2.56 已安装在 `C:\GIT\Git`，但未加入 PATH；命令里请用完整路径或新开终端
 
 ## License
 
