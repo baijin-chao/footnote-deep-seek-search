@@ -220,6 +220,12 @@ def rejudge(settings: Settings, dataset_path: Path, run_dir: Path, quiet: bool =
     finally:
         llm.close()
 
+    if not updated:
+        raise ValueError(
+            f"结果目录里的题目与数据集不匹配（{results_path} vs {dataset_path}）："
+            "请用 --dataset 指定生成这批结果时所用的数据集"
+        )
+
     summary = summarize(updated)
     meta = {"dataset": str(dataset_path), "model": settings.llm_model, "tag": f"rejudge:{run_dir.name}"}
     out_dir = run_dir / f"rejudge-{datetime.now().strftime('%H%M%S')}"

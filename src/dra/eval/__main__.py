@@ -53,7 +53,11 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.rejudge:
-        rejudge(settings, Path(args.dataset), Path(args.rejudge), quiet=args.quiet)
+        try:
+            rejudge(settings, Path(args.dataset), Path(args.rejudge), quiet=args.quiet)
+        except (FileNotFoundError, ValueError) as exc:
+            print(f"❌ {exc}")
+            return 2
         return 0
 
     options = EvalOptions(

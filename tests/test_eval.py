@@ -138,6 +138,33 @@ def test_summarize_counts_failures_in_denominator():
     assert summary["failures"]["no_evidence"] == 1
 
 
+def test_fetch_blocked_requires_few_documents():
+    q = Question("q", "fact", "问题", ("a", "b", "c"), False)
+    # 抓取成功率低，但已有 7 篇证据，结论仍可能正确 → 不归为抓取失败
+    signals = {
+        "status": "done",
+        "evidence": 7,
+        "documents": 7,
+        "fetch_attempts": 18,
+        "grounded_rate": 0.9,
+        "covered_items": 3,
+    }
+    assert classify_failure(q, signals) is None
+
+
+def test_fetch_blocked_when_evidence_is_thin():
+    q = Question("q", "fact", "问题", ("a", "b", "c"), False)
+    signals = {
+        "status": "done",
+        "evidence": 1,
+        "documents": 1,
+        "fetch_attempts": 18,
+        "grounded_rate": 0.9,
+        "covered_items": 0,
+    }
+    assert classify_failure(q, signals) == "fetch_blocked"
+
+
 def test_percentile():
     assert percentile([1, 2, 3, 4], 50) == 2
     assert percentile([1, 2, 3, 4], 95) == 4

@@ -92,7 +92,10 @@ def classify_failure(question: Question, signals: dict[str, Any]) -> str | None:
         return "no_evidence"
 
     attempts = max(1, signals.get("fetch_attempts", 0))
-    if attempts >= 3 and signals.get("documents", 0) / attempts < 0.5:
+    documents = signals.get("documents", 0)
+    # 抓取失败要同时满足「成功率低」和「证据本来就少」，
+    # 否则会把「抓了很多、失败一些、但结论正确」的题误判成抓取失败
+    if attempts >= 3 and documents < 3 and documents / attempts < 0.5:
         return "fetch_blocked"
 
     stop_reason = str(signals.get("stop_reason") or "")
